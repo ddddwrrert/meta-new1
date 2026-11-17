@@ -1,0 +1,32 @@
+run_dir: runs/demo
+max_budgets: 3
+tasks:
+  - name: tsp
+    problem: tsp
+    instance_seed: 1
+    params: {n_min: 24, n_max: 24}
+  - name: knapsack
+    problem: knapsack
+    instance_seed: 1
+    params: {n_min: 24, n_max: 24}
+llm:
+  provider: openai
+  base_url: https://api.deepseek.com
+  model: deepseek-chat
+  api_key_env: LLM_API_KEY
+sandbox:
+  time_limit_s: 1.0
+  tle_factor: 1.5
+  max_mem_mb: 1024
+  iter_budget: 4000
+  parallel: 4
+search:
+  n: 32
+  rho_0: 0.8
+  rho_min: 0.2
+  rho_max: 0.9
+  lam: 0.5
+  eta: 1.0
+  delta: 0.1
+  m: 3
+  epsilon_0: 0.000001

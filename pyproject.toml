@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meta-new"
+version = "0.1.0"
+description = "Per-problem RSI loop: adjacent-budget scores, incumbent control run, and ACT/HOLD/AVOID."
+requires-python = ">=3.10"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+meta-new = "meta_new.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["meta_new*"]
+
+[tool.setuptools.package-data]
+meta_new = ["problems/seeds/*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

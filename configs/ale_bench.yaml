@@ -1,0 +1,43 @@
+# Each task lives under tasks/ale_bench. solution.cpp is the baseline.
+# Evaluators also return each public seed score. Replacement still uses combined_score, the 50-seed mean.
+# Each evaluation scores 50 public seeds. max_budgets 100 is the search length:
+# budget 0 is the baseline, and the remaining budgets mutate the C++ program.
+# The interpreter is the Linux environment named by META_EVAL_PYTHON in .env.
+# That environment needs ale_bench, ale_bench_eval, and Docker.
+# The judge needs local images rust:1.79.0-buster and ale-bench:cpp20-202301
+# (docker pull yimjk/ale-bench:cpp20-202301 && docker tag yimjk/ale-bench:cpp20-202301 ale-bench:cpp20-202301).
+run_dir: runs/ale-bench
+max_budgets: 100
+evaluator:
+  via: wsl
+  distro: Ubuntu-24.04
+  python: ${META_EVAL_PYTHON}
+tasks:
+  - {name: ahc008, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc008}}
+  - {name: ahc011, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc011}}
+  - {name: ahc015, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc015}}
+  - {name: ahc016, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc016}}
+  - {name: ahc024, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc024}}
+  - {name: ahc025, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc025}}
+  - {name: ahc026, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc026}}
+  - {name: ahc027, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc027}}
+  - {name: ahc039, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc039}}
+  - {name: ahc046, problem: evolve, params: {task_dir: ../tasks/ale_bench/ahc046}}
+llm:
+  provider: openai
+  base_url: https://api.deepseek.com
+  model: deepseek-chat
+  api_key_env: LLM_API_KEY
+  max_tokens: 16000
+sandbox:
+  parallel: 1
+search:
+  n: 2
+  rho_0: 0.8
+  rho_min: 0.2
+  rho_max: 0.9
+  lam: 0.5
+  eta: 1.0
+  delta: 0.1
+  m: 3
+  epsilon_0: 0.000001
