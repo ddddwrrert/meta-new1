@@ -78,11 +78,13 @@ def _class_name(edit_class: str) -> str:
 def default_proposal(records: list[dict], skill: dict | None = None) -> Proposal:
     """One criterion update from every measured class in this budget.
 
-    A replaced incumbent does not keep avoid rules from the old code.
+    A replaced incumbent starts from an empty criterion. Counts measured on the old code are not rewritten as rules.
     A flat result does not by itself add a rule.
     """
     skill = skill or {"rules": []}
     replaced = any(rec.get("incumbent_replaced") for rec in records)
+    if replaced:
+        return Proposal()
     grouped: dict[str, dict] = {}
     for rec in records:
         name = _class_name(str(rec.get("edit_class", "")))
@@ -114,8 +116,6 @@ def default_proposal(records: list[dict], skill: dict | None = None) -> Proposal
         elif better >= 2 and not slot.get("misrelease"):
             stance, text = "act", "多次实测变好"
         else:
-            stance, text = None, ""
-        if replaced and stance == "avoid":
             stance, text = None, ""
         for rule in skill.get("rules") or []:
             if _class_name(str(rule.get("edit_class", ""))) != name:

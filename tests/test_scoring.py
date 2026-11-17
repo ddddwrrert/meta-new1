@@ -58,16 +58,17 @@ def test_rho_updates_once_per_formula():
     assert capped == 0.9
 
 
-def test_seed_table_repeats_drops_and_low_seeds_without_changing_the_mean():
+def test_rejected_candidate_is_listed_once_and_low_seeds_stay_on_the_incumbent():
     incumbent = [{"seed": i, "score": score} for i, score in enumerate([90, 80, 70, 60, 20, 10])]
     candidate = [{"seed": i, "score": score} for i, score in enumerate([40, 80, 70, 60, 20, 10])]
     text = seed_attention(incumbent, candidate, "higher", subject="drop_seed", adopted=False)
-    assert text.count("seed 0:") == 2
-    assert "−" in text
+    assert text.count("seed 0:") == 1
+    assert "未替换候选 drop_seed" in text
+    assert "不作为下一档修改目标" in text
     assert text.count("seed 4:") == 2
     assert text.count("seed 5:") == 2
+    assert "现任 20 仍低" in text
     assert "seed 1:" not in text
-    assert "合并" in text
     assert "不参与替换" in text
     assert judge("higher", 55, 40, 1e-6) == "worse"
     assert fitness_of({"combined_score": 55, "cases": candidate}) == 55
@@ -75,15 +76,35 @@ def test_seed_table_repeats_drops_and_low_seeds_without_changing_the_mean():
     assert _cases({"cases": "nope"}) is None
 
 
-def test_adopted_table_follows_the_new_low_seeds():
+def test_adopted_table_names_the_new_code_as_current():
     incumbent = [{"seed": i, "score": score} for i, score in enumerate([90, 80, 70, 60, 20, 10])]
     candidate = [{"seed": i, "score": score} for i, score in enumerate([90, 80, 70, 60, 95, 96])]
-    text = seed_attention(incumbent, candidate, "higher", subject="lift", adopted=True)
+    other = [{"seed": i, "score": score} for i, score in enumerate([10, 80, 70, 60, 20, 10])]
+    text = seed_attention(
+        incumbent,
+        candidate,
+        "higher",
+        subject="lift",
+        adopted=True,
+        others=[{"name": "drop_seed", "cases": other}],
+    )
     assert "seed 4:" not in text
     assert "seed 5:" not in text
     assert text.count("seed 2:") == 2
     assert text.count("seed 3:") == 2
+    assert "上一档 70 现任 70 仍低" in text
+    assert "现任来自 lift" in text
     assert "变好" in text
+    assert text.count("seed 0:") == 1
+    assert "未替换候选 drop_seed" in text
+
+
+def test_oriented_minimize_improvement_is_not_a_drop():
+    old = [{"seed": 0, "score": -100}, {"seed": 1, "score": -10}]
+    new = [{"seed": 0, "score": -50}, {"seed": 1, "score": -10}]
+    text = seed_attention(old, new, "higher", subject="clean", adopted=True)
+    assert "−" not in text
+    assert "上一档 -100 现任 -50 +" in text
 
 
 def test_equal_seeds_collapse_to_one_line():

@@ -7,7 +7,7 @@ Count rules still bound the criterion: a worse count that has not exceeded
 3 still runs, and the run that makes the count exceed 3 blacklists this
 incumbent only. A flat result does not change the worse count.
 A better result clears it.
-Replacing the incumbent drops the old blacklist, the old counts, and avoid rules.
+Replacing the incumbent drops the old blacklist, the old counts, and every rule.
 """
 
 from __future__ import annotations
@@ -85,11 +85,10 @@ def record(state, edit_class: str, verdict: str) -> dict:
 
 
 def clear_incumbent_memory(state) -> None:
-    """Old blacklist, avoid rules, and worse counts expire with the incumbent code."""
+    """Old blacklist, counts, and ACT / HOLD / AVOID rules expire with the incumbent code."""
     state.history = {}
     state.blacklist = []
-    rules = [r for r in (state.skill or {}).get("rules", []) if r.get("stance") != "avoid"]
-    state.skill = {"neutral": not rules, "rules": rules}
+    state.skill = {"neutral": True, "rules": []}
 
 
 def repeated_worse(state) -> list[str]:

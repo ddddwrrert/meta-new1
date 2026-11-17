@@ -276,7 +276,8 @@ def test_sign_table_is_prompt_text_and_the_mean_still_decides_replacement(tmp_pa
     assert state.official == 55
     assert _budget(tmp_path, 1)["official_after"] == 55
     assert _budget(tmp_path, 1)["candidates"][0]["verdict"] == "worse"
-    assert seen[1].count("seed 0:") == 2
+    assert seen[1].count("seed 0:") == 1
+    assert "不作为下一档修改目标" in seen[1]
     assert seen[1].count("seed 4:") == 2
     assert "seed 1:" not in seen[1]
     assert "不参与替换" in seen[1]

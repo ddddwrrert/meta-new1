@@ -168,6 +168,7 @@ def test_ale_bench_config_uses_each_solution_cpp(monkeypatch):
         assert "main" in disk
         assert len(problem.statement) > 200
         assert "num_public_cases = 50" in evaluator
+        assert "absolute_score * optim_factor" in evaluator
         origin = ORGANON / task.name / "solution.cpp"
         if origin.is_file():
             assert disk == origin.read_text(encoding="utf-8")

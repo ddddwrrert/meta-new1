@@ -1,5 +1,6 @@
 # Each task lives under tasks/ale_bench. solution.cpp is the baseline.
-# Evaluators also return each public seed score. Replacement still uses combined_score, the 50-seed mean.
+# Evaluators return each public seed score oriented so larger is better.
+# Replacement still uses combined_score, the 50-seed mean.
 # Each evaluation scores 50 public seeds. max_budgets 100 is the search length:
 # budget 0 is the baseline, and the remaining budgets mutate the C++ program.
 # The interpreter is the Linux environment named by META_EVAL_PYTHON in .env.

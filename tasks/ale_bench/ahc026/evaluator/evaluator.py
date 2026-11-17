@@ -74,7 +74,7 @@ def evaluate(program_path):
             "message": extracted_case.message,
             "combined_score": combined_score,
             "cases": [
-                {"seed": i, "score": case_result.absolute_score}
+                {"seed": i, "score": case_result.absolute_score * optim_factor}
                 for i, case_result in enumerate(public_result.case_results)
             ],
         }

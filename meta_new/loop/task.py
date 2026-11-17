@@ -16,7 +16,7 @@ from pathlib import Path
 
 from ..generation.verify import dedup, verify
 from ..meta import gate
-from ..meta.evolve import apply_proposal, default_proposal, meta_trace, neutral_skill, skill_text
+from ..meta.evolve import Proposal, apply_proposal, default_proposal, meta_trace, neutral_skill, skill_text
 from ..models import ProblemState, ProposeContext
 from ..util import sha256_text, write_json
 from .scoring import (
@@ -156,18 +156,23 @@ def _execute(state, problem, search, evaluator, candidates, root: Path, meta_fn,
         row["better_count"] = counted["better"]
     winner = select_winner(state.direction, judged)
     replaced = winner is not None
-    focus = winner if winner is not None else _best_ran(state.direction, admitted, outcomes)
-    focus_cases = None
-    focus_name = ""
-    if focus is not None:
-        focus_cases = getattr(outcomes[f"c{focus}"], "cases", None)
-        focus_name = admitted[focus][0].edit_class
+    adopted_cases = None
+    adopted_name = ""
+    others = []
+    for index, (cand, _row) in enumerate(admitted):
+        cases = getattr(outcomes[f"c{index}"], "cases", None)
+        if replaced and index == winner:
+            adopted_cases = cases
+            adopted_name = cand.edit_class
+        else:
+            others.append({"name": cand.edit_class, "cases": cases})
     seed_note = seed_attention(
         getattr(noise, "cases", None),
-        focus_cases,
+        adopted_cases,
         state.direction,
-        subject=focus_name,
+        subject=adopted_name,
         adopted=replaced,
+        others=others,
     )
     if replaced:
         cand, row = admitted[winner]
@@ -186,7 +191,7 @@ def _execute(state, problem, search, evaluator, candidates, root: Path, meta_fn,
         row["budget_verdict"] = conclusion
         row["incumbent_replaced"] = replaced
     trace = meta_trace(records)
-    proposal = meta_fn(records, state.skill)
+    proposal = Proposal() if replaced else meta_fn(records, state.skill)
     state.skill, meta_ok = apply_proposal(state.skill, proposal, seen, has_history=True)
     state.budget += 1
     state.score_history.append(state.official)
@@ -307,19 +312,6 @@ def _score_rows(records: list[dict]) -> list[dict]:
             row["verdict"] = rec.get("verdict")
         rows.append(row)
     return rows
-
-
-def _best_ran(direction: str, admitted, outcomes) -> int | None:
-    found = None
-    best = None
-    for index, _item in enumerate(admitted):
-        score = outcomes[f"c{index}"].score
-        if score is None:
-            continue
-        if best is None or (score > best if direction == "higher" else score < best):
-            best = score
-            found = index
-    return found
 
 
 def _excerpt(state: ProblemState, records: list[dict], official_before, conclusion: str, seed_note: str = "") -> str:

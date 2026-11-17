@@ -123,56 +123,72 @@ def seed_attention(
     direction: str = "higher",
     subject: str = "",
     adopted: bool = False,
+    others: list | None = None,
 ) -> str:
-    """Prompt text only. Official replacement still uses the mean score."""
+    """Prompt text only. Doubled lines belong to the code the next round will edit.
+
+    Case scores are higher-is-better, the same orientation as the mean.
+    A candidate that does not replace the incumbent is listed once and is not an edit target.
+    Official replacement still uses the mean score.
+    """
     incumbent = _seed_map(incumbent_cases)
-    candidate = _seed_map(candidate_cases)
-    if not incumbent and not candidate:
-        return ""
-    if adopted and candidate:
-        current = candidate
-    elif incumbent:
-        current = incumbent
+    discarded: list[tuple[str, dict[int, float]]] = []
+    if candidate_cases and not adopted:
+        discarded.append((subject or "候选", _seed_map(candidate_cases)))
+    for item in others or []:
+        if not isinstance(item, dict):
+            continue
+        discarded.append((str(item.get("name") or "候选"), _seed_map(item.get("cases"))))
+    if adopted and candidate_cases:
+        current = _seed_map(candidate_cases)
+        previous = incumbent
+        previous_label = "上一档"
     else:
-        current = candidate
+        current = incumbent
+        previous = {}
+        previous_label = ""
+    if not current and not previous and not any(scores for _name, scores in discarded):
+        return ""
     low = _low_seeds(current, direction)
     signs: dict[int, str] = {}
-    focused: set[int] = set()
-    for seed in set(incumbent) & set(candidate):
-        signs[seed] = _seed_sign(direction, incumbent[seed], candidate[seed])
-        if signs[seed] == "−":
-            focused.add(seed)
-    focused.update(low)
-    seeds = sorted(set(incumbent) | set(candidate))
-    title = "逐 seed 符号（写两遍的是 − 和仍低的 seed；不进入官方得分，不参与替换）"
-    if subject:
-        title += f"，对照 {subject}"
+    focused = set(low)
+    if previous and current:
+        for seed in set(previous) & set(current):
+            signs[seed] = _seed_sign(direction, previous[seed], current[seed])
+            if signs[seed] == "−":
+                focused.add(seed)
+    title = "逐 seed 符号（写两遍的是下一档现任代码上要处理的 seed；不进入官方得分，不参与替换）"
+    if adopted and subject:
+        title += f"，现任来自 {subject}"
     lines = [title + "："]
+    seeds = sorted(set(current) | set(previous))
     if not focused:
-        lines.append(f"{len(seeds)} 个 seed 没有 −，也没有仍低的，合并为一行。")
-        return "\n".join(lines)
-    improved = 0
-    unchanged = 0
-    for seed in seeds:
-        if seed in focused:
-            continue
-        sign = signs.get(seed)
-        if sign == "+":
-            improved += 1
-        else:
-            unchanged += 1
-    for seed in sorted(focused):
-        line = _seed_line(seed, incumbent, candidate, signs, low)
-        lines.append(line)
-        lines.append(line)
-    rest = improved + unchanged
-    if rest:
-        parts = []
-        if improved:
-            parts.append(f"{improved} 个变好")
-        if unchanged:
-            parts.append(f"{unchanged} 个相同")
-        lines.append(f"其余 {rest} 个 seed 合并：" + "，".join(parts) + "。")
+        if seeds:
+            lines.append(f"{len(seeds)} 个 seed 没有 −，也没有仍低的，合并为一行。")
+    else:
+        improved = 0
+        unchanged = 0
+        for seed in seeds:
+            if seed in focused:
+                continue
+            if signs.get(seed) == "+":
+                improved += 1
+            else:
+                unchanged += 1
+        for seed in sorted(focused):
+            line = _focus_line(seed, current, previous, signs, low, previous_label)
+            lines.append(line)
+            lines.append(line)
+        rest = improved + unchanged
+        if rest:
+            parts = []
+            if improved:
+                parts.append(f"{improved} 个变好")
+            if unchanged:
+                parts.append(f"{unchanged} 个相同")
+            lines.append(f"其余 {rest} 个 seed 合并：" + "，".join(parts) + "。")
+    for name, scores in discarded:
+        lines.extend(_discarded_lines(name, incumbent, scores, direction))
     return "\n".join(lines)
 
 
@@ -216,17 +232,38 @@ def _seed_sign(direction: str, previous: float, candidate: float) -> str:
     return "+" if candidate < previous else "−"
 
 
-def _seed_line(seed: int, incumbent: dict[int, float], candidate: dict[int, float], signs: dict[int, str], low: set[int]) -> str:
+def _focus_line(
+    seed: int,
+    current: dict[int, float],
+    previous: dict[int, float],
+    signs: dict[int, str],
+    low: set[int],
+    previous_label: str,
+) -> str:
     parts = [f"seed {seed}:"]
-    if seed in incumbent:
-        parts.append(f"现任 {_num(incumbent[seed])}")
-    if seed in candidate:
-        parts.append(f"候选 {_num(candidate[seed])}")
-    if seed in signs:
-        parts.append(signs[seed])
-    elif seed in low:
+    if previous_label and seed in previous:
+        parts.append(f"{previous_label} {_num(previous[seed])}")
+    if seed in current:
+        parts.append(f"现任 {_num(current[seed])}")
+    sign = signs.get(seed)
+    if sign in ("+", "−"):
+        parts.append(sign)
+    if seed in low:
         parts.append("仍低")
     return " ".join(parts)
+
+
+def _discarded_lines(name: str, reference: dict[int, float], candidate: dict[int, float], direction: str) -> list[str]:
+    if not reference or not candidate:
+        return []
+    rows = []
+    for seed in sorted(set(reference) & set(candidate)):
+        if _seed_sign(direction, reference[seed], candidate[seed]) != "−":
+            continue
+        rows.append(f"seed {seed}: 对照 {_num(reference[seed])} 该候选 {_num(candidate[seed])}")
+    if not rows:
+        return []
+    return [f"未替换候选 {name}（每个 seed 只写一次，不作为下一档修改目标）：", *rows]
 
 
 def _num(value: float) -> str:

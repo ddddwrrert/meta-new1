@@ -43,13 +43,13 @@ def extract_code(text: str, language: str) -> str:
 
 ANALYZER_FIRST = (
     "你是 Analyzer。阅读 baseline 轨迹，指出限制求解质量的行为特征和所在步骤。"
-    "若轨迹里有逐 seed 符号，行为只描述写了两遍的 seed。这些符号不是得分。"
+    "若轨迹里有逐 seed 符号，行为只描述写了两遍的 seed。只写一次的 seed 属于未替换候选，不要写成当前代码的缺陷。这些符号不是得分。"
     "这次没有升降结论，不要把 baseline 写成变好或变差，不要给修改方案。"
     '只输出 JSON：{"problem":"...","budget":0,"verdict":null,"behaviors":[{"feature":"...","step":"..."}]}'
 )
 ANALYZER_NEXT = (
     "你是 Analyzer。只说明本档升降对应的行为，不给修改方案。"
-    "若轨迹里有逐 seed 符号，把 − 和仍低的 seed 写进行为。符号和重复行不改变官方得分。"
+    "若轨迹里有逐 seed 符号，把写了两遍的 seed 写进行为。只写一次的 seed 属于未替换候选，不要写成现任的缺陷。符号和重复行不改变官方得分。"
     "变好时写出要保留的行为，并标出还能改进的位置，不要把变好写成缺陷。"
     "变差时定位与这次变差对应的行为和步骤。"
     "持平时不要写成退化，也不要写缺陷根因，也不要改写官方得分。"
@@ -59,7 +59,7 @@ ANALYZER_NEXT = (
 CRITIC = (
     "你是 Critic。根据 Analyzer 的记录写修改假设，不要写代码。"
     "单次变差不写成必须修改的位置。只有反复变差的类别才写成必须处理的局部修改。"
-    "若轨迹把某些 seed 写了两遍，假设针对这些 seed，并且只改一份求解过程。不要写成两套搜索或两个 solve。"
+    "若轨迹把某些 seed 写了两遍，假设只针对这些 seed，它们属于下一档要改的现任。只写一次的 seed 不要改。并且只改一份求解过程。不要写成两套搜索或两个 solve。"
     "标出可能让后续档位变差的副作用。去掉明显不能运行或会直接破坏合法输出的改法。"
     "edit_class 用这次改动自己的英文蛇形名，例如 nearest_neighbor 或 swap_two_cities。"
     "不要使用 snake_name、local、explore、unlabeled 作为类别名。"
@@ -99,6 +99,7 @@ META = (
     "次数门槛固定为 3：累计变差超过 3 次才写入 avoid，这个数字不能改。未超过 3 次的变差写成 hold，该类仍可再跑。"
     "变好次数达到 2 次且没有未清零的变差，才写成 act。只有一次变好不要写成 act。"
     "删除和本档实测不符的旧规则，保留仍然相符的规则。"
+    "本档如果替换了 incumbent，不要把旧代码上的 act、hold 或 avoid 写进新代码。"
     "不要给出放行几乎全部变异或拦截几乎全部变异的规则。"
     '只输出 JSON：{"delete":[],"add":[{"id":"...","edit_class":"...","stance":"act|hold|avoid","text":"..."}],'
     '"allow_all":false,"block_all":false}'

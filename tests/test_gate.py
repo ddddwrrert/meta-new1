@@ -109,21 +109,21 @@ def test_blacklist_beats_an_act_rule():
     assert decision["run"] is False
 
 
-def test_replacement_drops_avoid_rules_and_keeps_the_rest():
+def test_replacement_drops_rules_measured_on_the_old_code():
     state = _state()
     state.skill = {
         "neutral": False,
         "rules": [
             {"id": "a", "edit_class": "swap", "stance": "avoid", "text": ""},
             {"id": "b", "edit_class": "ratio", "stance": "act", "text": ""},
+            {"id": "c", "edit_class": "heavy", "stance": "hold", "text": ""},
         ],
     }
     state.blacklist = ["inc|swap"]
     clear_incumbent_memory(state)
     assert state.blacklist == []
     assert state.history == {}
-    assert [rule["id"] for rule in state.skill["rules"]] == ["b"]
-    assert state.skill["neutral"] is False
+    assert state.skill == {"neutral": True, "rules": []}
 
 
 def test_blacklist_belongs_to_the_current_incumbent():
